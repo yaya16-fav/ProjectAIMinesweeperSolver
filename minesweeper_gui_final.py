@@ -1,45 +1,11 @@
-"""
-Minesweeper 6x6 - GUI Version (Forest/Mine Background Edition)
-================================================================
-Fitur di versi ini:
-    - Background scene "mulut tambang di tengah hutan senja" di-generate
-      SENDIRI secara prosedural pakai Pillow (bukan file gambar eksternal)
-    - Kunang-kunang kecil terbang pelan & berkedip di background (secukupnya,
-      6 ekor, tidak berlebihan)
-    - Judul "MINESWEEPER" jadi papan kayu (signboard) ala rambu tambang
-    - Semua panel UI (bezel grid, panel keterangan, tombol) tetap bergaya
-      3D chunky seperti versi sebelumnya
-    - Popup Game Over / Menang tetap ada, dengan tombol Main Lagi
-
-PERUBAHAN LAYOUT (permintaan user):
-    - Window sekarang lebih LEBAR dan tidak terlalu tinggi (landscape-ish),
-      supaya tidak "mentok" ke bawah layar laptop.
-    - Panel "keterangan klik" sekarang benar-benar menempel rapi di BAWAH
-      kotak grid 6x6 (sebelumnya bisa tertumpuk/kelihatan di tengah karena
-      ukuran grid diukur SEBELUM tombol-tombol selnya dibuat -> sudah
-      diperbaiki dengan membangun tombol grid sekaligus saat bezel dibuat).
-    - Seluruh blok (judul, panel kontrol, grid, keterangan) diposisikan
-      di TENGAH window baik secara horizontal maupun vertikal.
-
-DEPENDENSI TAMBAHAN:
-    pip install pillow
-
-Cara jalankan:
-    python minesweeper_gui_polished.py
-"""
 
 import random
 import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageDraw, ImageTk
-
 from minesweeper_ai import MinesweeperAI
 
-
-# ============================================================
 # COLOR PALETTE
-# ============================================================
-
 PALETTE = {
     "bezel_bg":        "#F4D35E",
     "bezel_border":    "#C7861F",
@@ -58,7 +24,7 @@ PALETTE = {
     "restart_btn":     "#EF476F",
     "restart_btn_hover": "#FF5C7A",
     "popup_bg":        "#FFFDF5",
-    # papan kayu judul (signboard), menyatu dengan tema tambang/hutan
+    # papan kayu
     "signboard_bg":     "#6B4226",
     "signboard_border": "#3E2513",
     "sign_text_face":   "#FFE8B5",
@@ -71,9 +37,8 @@ PALETTE = {
     "ai_btn_hover":      "#4FE0D2",
     "ai_btn_stop":       "#6C757D",
     "ai_btn_stop_hover": "#868E96",
-    "ai_highlight_sure": "#00E676",   # langkah pasti (dari penalaran logika)
-    "ai_highlight_guess": "#FF7A00",  # langkah tebakan (tidak ada info cukup)
-}
+    "ai_highlight_sure": "#00E676",   
+    "ai_highlight_guess": "#FF7A00", 
 
 NUMBER_COLORS = {
     1: "#1D4ED8", 2: "#15803D", 3: "#DC2626", 4: "#7C3AED",
@@ -90,10 +55,7 @@ TROPHY_ICON = "\U0001F3C6"
 PARTY_ICON = "\U0001F389"
 
 
-# ============================================================
-# GAME ENGINE (logic murni, tidak berubah)
-# ============================================================
-
+# GAME ENGINE
 class MinesweeperGame:
     SIZE = 6
 
@@ -207,22 +169,11 @@ class MinesweeperGame:
         return state
 
 
-# ============================================================
 # AI SOLVER WRAPPER
-# ============================================================
-# Subclass TIPIS di atas MinesweeperAI (dari minesweeper_ai.py) — HANYA
-# untuk melacak apakah langkah terakhir berasal dari penalaran pasti
-# (basic rules / constraint satisfaction) atau dari tebakan acak
-# (_guess). Tujuannya semata-mata kosmetik (warna highlight berbeda di
-# GUI), algoritma solver ASLI di minesweeper_ai.py tidak diubah sama
-# sekali — kelas ini cuma "menumpangi" method yang sudah ada.
-
 class TrackedMinesweeperAI(MinesweeperAI):
     def __init__(self, rows, cols, total_bombs):
         super().__init__(rows, cols, total_bombs)
         self.last_action_was_guess = False
-        # 'start' | 'basic' | 'csp' | 'guess' — dipakai GUI untuk menulis
-        # alasan langkah dalam bahasa manusia di panel log.
         self.last_reason = "start"
 
     def _apply_basic_rules(self):
@@ -247,12 +198,7 @@ class TrackedMinesweeperAI(MinesweeperAI):
         return super().get_action()
 
 
-# ============================================================
-# BACKGROUND GENERATOR (hutan + mulut tambang, prosedural via Pillow)
-# Dibuat scalable terhadap width/height supaya tetap penuh & proporsional
-# saat window melebar.
-# ============================================================
-
+# BACKGROUND GENERATOR
 def generate_forest_mine_background(width, height, seed=7):
     rnd = random.Random(seed)
 
@@ -315,8 +261,6 @@ def generate_forest_mine_background(width, height, seed=7):
     tree_back = (28, 38, 30)
     tree_front = (16, 24, 18)
 
-    # Jumlah pohon dihitung dari lebar canvas, supaya background tetap
-    # penuh (tidak bolong di kanan) walau window dibuat lebih lebar.
     back_spacing = 55
     back_count = max(6, (width - 20) // back_spacing + 1)
     for i in range(back_count):
@@ -386,19 +330,11 @@ def generate_forest_mine_background(width, height, seed=7):
     return img
 
 
-# ============================================================
 # GUI
-# ============================================================
-
 class MinesweeperGUI:
-    # Window dibuat LEBAR & tidak terlalu tinggi (landscape-ish) supaya
-    # tidak mentok ke bawah layar laptop.
     BG_W = 640
     BG_H = 680
     FIREFLY_COUNT = 6
-
-    # Area terbang kunang-kunang, dihitung relatif terhadap tinggi window
-    # (bukan angka pixel tetap) supaya tetap proporsional untuk ukuran apa pun.
     FIREFLY_Y_MIN_FRAC = 0.06
     FIREFLY_Y_MAX_FRAC = 0.34
 
@@ -419,7 +355,6 @@ class MinesweeperGUI:
         self.icon_font = tkfont.Font(family="Segoe UI Emoji", size=13)
         self.logo_font = tkfont.Font(family="Segoe UI Emoji", size=22)
 
-        # ---- Canvas dasar + background hutan/tambang ----
         self.canvas = tk.Canvas(self.root, width=self.BG_W, height=self.BG_H,
                                  highlightthickness=0, bd=0)
         self.canvas.pack(fill="both", expand=True)
@@ -428,14 +363,10 @@ class MinesweeperGUI:
         self.bg_photo = ImageTk.PhotoImage(bg_image)  # simpan referensi, wajib!
         self.canvas.create_image(0, 0, anchor="nw", image=self.bg_photo)
 
-        # ---- Kunang-kunang (dibuat SEBELUM panel UI, supaya panel
-        # otomatis "menutupi" kunang-kunang saat lewat di baliknya) ----
         self.fireflies = []
         self._init_fireflies(self.FIREFLY_COUNT)
 
-        # ---- State AI solver ----
-        # Didefinisikan SEBELUM panel kontrol dibangun karena binding
-        # tombol AI SOLVE (hover, dsb.) langsung membaca self.ai_running.
+        # tombol AI SOLVE 
         self.ai = None
         self.ai_running = False
         self.ai_move_count = 0
@@ -443,7 +374,7 @@ class MinesweeperGUI:
         self.AI_STEP_DELAY_MS = 350
         self._ai_after_id = None
         self._last_highlighted_btn = None
-        # Jendela log terpisah (dibuat saat AI SOLVE ditekan)
+
         self.log_window = None
         self.log_text = None
         self.ai_mode_var = tk.StringVar(value="manual")  # 'manual' | 'auto'
@@ -451,11 +382,7 @@ class MinesweeperGUI:
         self.next_step_button = None
         self.pause_button = None
 
-        # ---- Panel UI ----
-        # PENTING: grid tombol 6x6 dibangun SEKALIGUS di sini (bukan
-        # belakangan di new_game()), supaya saat layout dihitung, tinggi
-        # kotak grid sudah final -> panel keterangan tidak akan
-        # tertumpuk/salah posisi lagi.
+        # Panel UI
         title_widget = self._build_title()
         control_widget = self._build_control_panel()
         bezel_widget = self._build_bezel_and_grid()
@@ -464,22 +391,14 @@ class MinesweeperGUI:
         self.popup = None
         self.new_game()
 
-        # Layout dihitung SETELAH semua widget (termasuk 36 tombol grid)
-        # benar-benar ada, dan diposisikan di tengah window baik
-        # horizontal maupun vertikal.
         self._layout_widgets_on_canvas(
             [title_widget, control_widget, bezel_widget, instruction_widget]
         )
 
         self._animate_fireflies()
 
-    # ---------------- Layout helper ----------------
 
     def _layout_widgets_on_canvas(self, widgets, spacing=16, min_margin=20):
-        """Menumpuk widget dari atas ke bawah, di-center secara horizontal
-        (per widget) DAN memposisikan seluruh blok widget di tengah
-        window secara vertikal (jika window lebih tinggi dari total
-        konten)."""
         self.root.update_idletasks()
         heights = [w.winfo_reqheight() for w in widgets]
         total_height = sum(heights) + spacing * (len(widgets) - 1)
@@ -490,7 +409,7 @@ class MinesweeperGUI:
             self.canvas.create_window(center_x, y, anchor="n", window=w)
             y += h + spacing
 
-    # ---------------- Kunang-kunang ----------------
+    # Kunang-kunang
 
     def _init_fireflies(self, count):
         for _ in range(count):
@@ -515,7 +434,6 @@ class MinesweeperGUI:
 
     def _animate_fireflies(self):
         for f in self.fireflies:
-            # sedikit belokan acak supaya terbangnya terasa organik, bukan lurus
             f["vx"] += random.uniform(-0.05, 0.05)
             f["vy"] += random.uniform(-0.05, 0.05)
             f["vx"] = max(-0.5, min(0.5, f["vx"]))
@@ -544,11 +462,9 @@ class MinesweeperGUI:
 
         self.root.after(70, self._animate_fireflies)
 
-    # ---------------- UI construction (dipanggil dengan parent=self.canvas) ----------------
+    #UI construction
 
     def _build_title(self):
-        # Judul dibuat seperti PAPAN KAYU (signboard) ala rambu tambang,
-        # menyatu dengan tema hutan/tambang di background
         frame = tk.Frame(
             self.canvas, bg=PALETTE["signboard_bg"],
             highlightbackground=PALETTE["signboard_border"], highlightthickness=2,
@@ -651,9 +567,6 @@ class MinesweeperGUI:
         self.grid_frame = tk.Frame(self.inner_pad, bg=PALETTE["bezel_inset"])
         self.grid_frame.pack(padx=8, pady=8)
 
-        # Tombol-tombol sel dibuat SEKARANG (bukan di new_game()), supaya
-        # tinggi bezel sudah final saat layout dihitung nanti. new_game()
-        # cukup me-reset tampilan tombol yang sudah ada via refresh_board().
         self.buttons = {}
         for r in range(MinesweeperGame.SIZE):
             for c in range(MinesweeperGame.SIZE):
@@ -704,11 +617,9 @@ class MinesweeperGUI:
 
         return panel
 
-    # ---------------- Game lifecycle ----------------
+    # Game lifecycle
 
     def new_game(self):
-        """Reset state game & tampilkan ulang papan TANPA membongkar-pasang
-        tombol grid (tombol dibuat sekali saja di _build_bezel_and_grid)."""
         self._stop_ai(reset_status=True)
         self.game = MinesweeperGame(num_mines=self.num_mines)
         self._close_popup()
@@ -722,7 +633,7 @@ class MinesweeperGUI:
     def restart(self):
         self.new_game()
 
-    # ---------------- Interaction ----------------
+    # Interaction
 
     def on_hover(self, r, c, entering):
         cell = (r, c)
@@ -752,17 +663,7 @@ class MinesweeperGUI:
         self.game.flag_cell(r, c)
         self.refresh_board()
 
-    # ---------------- AI Solver integration ----------------
-    # Menghubungkan MinesweeperAI (minesweeper_ai.py) ke MinesweeperGame.
-    # AI tidak pernah menyentuh self.game langsung -> ia hanya menerima
-    # ('open'|'flag', r, c) lalu GUI ini yang menjalankannya di game
-    # engine, sama seperti kalau manusia yang klik.
-    #
-    # Untuk presentasi, setiap langkah AI dicatat ke jendela log
-    # terpisah dengan alasan dalam bahasa manusia, dan bisa dijalankan
-    # dalam Mode Manual (tekan "Langkah Berikutnya" sendiri) atau Mode
-    # Otomatis (berjalan sendiri dengan jeda).
-
+    # AI Solver integration
     REASON_LABELS = {
         "start": "Langkah pembuka \u2014 belum ada info, mulai dari titik standar",
         "csp": "Constraint satisfaction \u2014 dua batasan angka dibandingkan (subset method)",
@@ -777,11 +678,6 @@ class MinesweeperGUI:
         return self.REASON_LABELS.get(reason, "")
 
     def _find_basic_trigger(self, r, c, action):
-        """Cari sel BERNOMOR yang memicu aturan dasar untuk aksi di (r, c).
-        HANYA untuk keperluan penjelasan di log (menampilkan 'bindings'
-        ala tabel forward-chaining di slide) -- tidak mengubah logika
-        AI sama sekali, cuma membaca ulang self.ai.grid yang sudah ada.
-        """
         grid = self.ai.grid
         rows, cols = self.ai.rows, self.ai.cols
         for tr in range(rows):
@@ -834,9 +730,7 @@ class MinesweeperGUI:
 
         if self.ai_mode_var.get() == "auto":
             self._ai_after_id = self.root.after(self.AI_STEP_DELAY_MS, self._ai_auto_tick)
-        # Mode manual: tidak dijadwalkan otomatis, menunggu tombol
-        # "Langkah Berikutnya" di jendela log.
-
+        
     def _stop_ai(self, reset_status):
         if self._ai_after_id is not None:
             try:
@@ -865,7 +759,7 @@ class MinesweeperGUI:
             self.log_window = None
             self.log_text = None
 
-    # ---- Jendela log presentasi ----
+    # Jendela log presentasi
 
     def _open_log_window(self):
         if self.log_window is not None:
@@ -986,8 +880,6 @@ class MinesweeperGUI:
         self.log_text.see("end")
 
     def _advance_ai(self):
-        """Jalankan SATU langkah AI. Dipanggil oleh tombol manual atau
-        oleh loop otomatis (_ai_auto_tick)."""
         if not self.ai_running or self.game.game_over:
             self._stop_ai(reset_status=False)
             return
@@ -1024,8 +916,6 @@ class MinesweeperGUI:
                 self.trigger_explosion_sequence()
                 return
 
-            # Laporkan SEMUA sel yang baru terbuka (penting untuk cascade
-            # flood-fill, bukan hanya sel yang diklik AI).
             newly_opened = self.game.revealed - before
             for cell in newly_opened:
                 self.ai.report_open(cell[0], cell[1], self.game.numbers.get(cell, 0))
@@ -1064,9 +954,6 @@ class MinesweeperGUI:
         )
 
     def _highlight_ai_cell(self, r, c, is_guess=False):
-        # Highlight sel sebelumnya dimatikan dulu, lalu sel baru
-        # dinyalakan dan DIBIARKAN menyala (tidak auto-hilang) supaya
-        # presenter punya waktu menjelaskan sebelum langkah berikutnya.
         if self._last_highlighted_btn is not None:
             self._last_highlighted_btn.config(highlightthickness=0)
         btn = self.buttons.get((r, c))
@@ -1076,7 +963,7 @@ class MinesweeperGUI:
         btn.config(highlightbackground=color, highlightthickness=6)
         self._last_highlighted_btn = btn
 
-    # ---------------- Rendering ----------------
+    # Rendering 
 
     def refresh_board(self):
         for (r, c), btn in self.buttons.items():
@@ -1106,7 +993,7 @@ class MinesweeperGUI:
         flagged = len(self.game.flagged)
         self.remaining_label.config(text=f"Sisa tertutup: {remaining}  |  Flag: {flagged}")
 
-    # ---------------- Explosion effect ----------------
+    # Explosion effect 
 
     def trigger_explosion_sequence(self):
         self.face_label.config(text=FACE_LOSE)
@@ -1142,7 +1029,7 @@ class MinesweeperGUI:
         else:
             self.bezel.config(highlightbackground=PALETTE["bezel_border"])
 
-    # ---------------- Popup akhir game ----------------
+    # Popup akhir game
 
     def _close_popup(self):
         if self.popup is not None:
