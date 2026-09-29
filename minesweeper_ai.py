@@ -1,38 +1,4 @@
-"""
-Minesweeper AI Solver — Knowledge-Based (tanpa ML/DL)
-=====================================================
-Modul ini HANYA berisi algoritma solver.
-Tidak ada GUI, tidak ada game logic, tidak ada generator bom.
-
-CARA INTEGRASI:
-    1. Import class MinesweeperAI
-    2. Buat instance: ai = MinesweeperAI(rows, cols, total_bombs)
-    3. Loop:
-        a. action, r, c = ai.get_action()
-        b. Jalankan action tersebut di simulator
-        c. Laporkan hasilnya ke AI via ai.report_open(r, c, value)
-           atau ai.report_flag(r, c)
-        d. Jika cascade (buka banyak sel sekaligus), panggil
-           ai.report_open() untuk SETIAP sel yang terbuka
-    4. Ulangi sampai game selesai
-
-CONTOH INTEGRASI MINIMAL:
-    ai = MinesweeperAI(6, 6, total_bombs=6)
-
-    while not game_over:
-        action, r, c = ai.get_action()
-
-        if action == 'open':
-            result = game.open(r, c)       # buka di simulator
-            for cell in result.opened:      # laporkan semua sel terbuka
-                ai.report_open(cell.r, cell.c, cell.value)
-        elif action == 'flag':
-            game.flag(r, c)                # tandai di simulator
-            ai.report_flag(r, c)
-"""
-
 import random
-
 
 class MinesweeperAI:
 
@@ -47,11 +13,10 @@ class MinesweeperAI:
         self._queue: list[tuple[str, int, int]] = []
         self._queue.append(('open', 0, 0))
 
-    # === INTERFACE UNTUK SIMULATOR ===
+    #INTERFACE SIMULATOR
 
     def get_action(self) -> tuple[str, int, int]:
-        """Kembalikan aksi berikutnya: ('open', r, c) atau ('flag', r, c)."""
-        # Buang aksi basi (sel sudah terbuka/diflag)
+        # Buang aksi sel sudah terbuka/diflag
         while self._queue:
             action, r, c = self._queue[0]
             if action == 'open' and self.grid[r][c] != self.HIDDEN:
@@ -77,23 +42,23 @@ class MinesweeperAI:
         return self._guess()
 
     def report_open(self, r: int, c: int, value: int):
-        """Simulator melaporkan: sel (r,c) terbuka, isinya value (0-8)."""
+        "Simulator melaporkan: sel (r,c) terbuka, isinya value (0-8)."
         self.grid[r][c] = value
 
     def report_flag(self, r: int, c: int):
-        """Simulator melaporkan: sel (r,c) berhasil di-flag."""
+        "Simulator melaporkan: sel (r,c) berhasil di-flag."
         self.grid[r][c] = self.FLAGGED
 
-    # === OTAK AI ===
+    # OTAK AI
 
     def _think(self):
-        """Jalankan basic rules, lalu CS jika masih buntu."""
+        "Jalankan basic rules, lalu CS jika masih buntu."
         self._apply_basic_rules()
         if not self._queue:
             self._apply_constraint_satisfaction()
 
     def _apply_basic_rules(self):
-        """Scan seluruh grid, terapkan aturan FLAG dan OPEN."""
+        "Scan seluruh grid, terapkan aturan FLAG dan OPEN."
         actions = set()
 
         for r in range(self.rows):
@@ -119,7 +84,7 @@ class MinesweeperAI:
         self._queue.extend(actions)
 
     def _apply_constraint_satisfaction(self):
-        """Bandingkan constraint antar-sel (subset method)."""
+        "Bandingkan constraint antar-sel (subset method)."
         constraints = []
         seen_sets: set[tuple[frozenset, int]] = set()
 
@@ -174,7 +139,7 @@ class MinesweeperAI:
         self._queue.extend(actions)
 
     def _guess(self) -> tuple[str, int, int]:
-        """Tebak acak — prioritaskan sel di perbatasan."""
+        "Tebak acak — prioritaskan sel di perbatasan."
         candidates = []
         border = []
 
@@ -193,7 +158,7 @@ class MinesweeperAI:
         r, c = random.choice(pool)
         return ('open', r, c)
 
-    # === UTILITAS ===
+    # UTILITAS
 
     def _neighbors(self, r: int, c: int):
         for dr in (-1, 0, 1):
@@ -205,7 +170,7 @@ class MinesweeperAI:
                     yield (nr, nc)
 
     def _analyze(self, r: int, c: int):
-        """Return (list hidden neighbors, flagged count)."""
+        "Return (list hidden neighbors, flagged count)."
         hidden = []
         flagged = 0
         for nr, nc in self._neighbors(r, c):
